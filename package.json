@@ -6,7 +6,8 @@
   "scripts": {
     "watch": "watch 'npm run compile' src",
     "compile": "babel src --out-dir lib",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublish": "npm run compile"
   },
   "bin": {
     "sync-liferay-resources": "bin/liferay-resources-sync.js"
