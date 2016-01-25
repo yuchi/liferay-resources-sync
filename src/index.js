@@ -1,6 +1,6 @@
 
 import { resolve } from 'path';
-import { writeFileSync } from 'fs';
+import { writeFile } from 'fs';
 import liferay from 'liferay-connector';
 import mkdirp from 'mkdirp';
 import program from 'commander';
@@ -12,7 +12,10 @@ import searchPath from './search-path';
 import pkg from '../package';
 
 const { Promise } = liferay;
-const { coroutine, map } = Promise;
+const { coroutine, map, promisify } = Promise;
+
+const writeFileAsync = promisify(writeFile);
+const mkdirpAsync = promisify(mkdirp);
 
 const classNames = [
   "com.liferay.portal.model.LayoutSet",
@@ -125,12 +128,12 @@ program
 
           const dir = resolve(templatesDir, siteDirname, humanClassName);
 
-          mkdirp.sync(dir);
+          yield mkdirpAsync(dir);
 
           console.log('Structure', friendlyURL, '•', siteDirname, humanClassName, filename, extension);
 
-          writeFileSync(resolve(dir, filename+'.'+extension), structure.xsd);
-          writeFileSync(
+          yield writeFileAsync(resolve(dir, filename+'.'+extension), structure.xsd);
+          yield writeFileAsync(
             resolve(dir, filename+'.'+extension+'.json'),
             JSON.stringify(structure, null, 2)
           );
@@ -164,12 +167,12 @@ program
 
             const dir = resolve(templatesDir, siteDirname, humanClassName);
 
-            mkdirp.sync(dir);
+            yield mkdirpAsync(dir);
 
             console.log('Template', friendlyURL, '•', siteDirname, humanClassName, filename, extension);
 
-            writeFileSync(resolve(dir, filename+'.'+extension), template.script);
-            writeFileSync(
+            yield writeFileAsync(resolve(dir, filename+'.'+extension), template.script);
+            yield writeFileAsync(
               resolve(dir, filename+'.'+extension+'.json'),
               JSON.stringify(template, null, 2)
             );
