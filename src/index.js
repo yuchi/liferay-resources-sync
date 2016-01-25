@@ -12,7 +12,7 @@ import searchPath from './search-path';
 import pkg from '../package';
 
 const { Promise } = liferay;
-const { coroutine } = Promise;
+const { coroutine, map } = Promise;
 
 const classNames = [
   "com.liferay.portal.model.LayoutSet",
@@ -91,17 +91,10 @@ program
         })
       ];
 
-      for (let { friendlyURL, groupId } of sites) {
+      //for (let { friendlyURL, groupId } of sites) {
+      yield map(sites, coroutine(function * ({ friendlyURL, groupId }) {
 
         const siteDirname = slug(friendlyURL.slice(1));
-
-        console.log(``);
-        console.log(`##`);
-        console.log(`## Check ${friendlyURL}`);
-        console.log(`##`);
-        console.log(``);
-
-        console.log("Structures:");
 
         const structures = yield session.invoke({
           "/ddmstructure/get-structures": { groupId }
@@ -109,7 +102,8 @@ program
 
         const structuresDataByStructureId = {}
 
-        for (let structure of structures) {
+        //for (let structure of structures) {
+        yield map(structures, coroutine(function * (structure) {
           let structureClassName;
 
           for (let className of classNames) {
@@ -121,8 +115,8 @@ program
           }
 
           if (!structureClassName) {
-            console.log('-', 'Skipping', structure.nameCurrentValue);
-            continue;
+            console.log('Structure', friendlyURL, '- Skipping', structure.nameCurrentValue);
+            return;
           }
 
           const humanClassName = humanClassNames[structureClassName];
@@ -133,7 +127,7 @@ program
 
           mkdirp.sync(dir);
 
-          console.log('•', siteDirname, humanClassName, filename, extension);
+          console.log('Structure', friendlyURL, '•', siteDirname, humanClassName, filename, extension);
 
           writeFileSync(resolve(dir, filename+'.'+extension), structure.xsd);
           writeFileSync(
@@ -144,11 +138,10 @@ program
           structuresDataByStructureId[structure.structureId] = {
             structure, structureClassName, humanClassName
           };
-        }
+        }));
 
-        console.log("Templates:");
-
-        for (let className of classNames) {
+        //for (let className of classNames) {
+        yield map(classNames, coroutine(function * (className) {
           const classNameId = yield getClassNameId(className);
 
           const templates = yield session.invoke({
@@ -157,7 +150,8 @@ program
             }
           });
 
-          for (let template of templates) {
+          //for (let template of templates) {
+          yield map(templates, coroutine(function * (template) {
             const structureData = structuresDataByStructureId[template.classPK];
 
             const extension = template.language;
@@ -172,16 +166,16 @@ program
 
             mkdirp.sync(dir);
 
-            console.log('•', siteDirname, humanClassName, filename, extension);
+            console.log('Template', friendlyURL, '•', siteDirname, humanClassName, filename, extension);
 
             writeFileSync(resolve(dir, filename+'.'+extension), template.script);
             writeFileSync(
               resolve(dir, filename+'.'+extension+'.json'),
               JSON.stringify(template, null, 2)
             );
-          }
-        }
-      }
+          }));
+        }));
+      }));
     })();
 
   });
